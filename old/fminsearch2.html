@@ -1,0 +1,293 @@
+<html>
+<head>
+<script src = "https://code.jquery.com/jquery-2.1.1.min.js"></script>
+<script src="fminsearch.js"></script>
+<script src="Chart.min.js"></script>
+</head>
+<body>
+
+<a id = "refreshplot" onclick = "plot()" href = "#">REFRESH THIS</a><br>
+X Values: <input type="text" id = "xvalinput" name="xvalinput" size = "100"/ value = "1,3,7,14,30,60,90,120,150,180,210,240,270,300,330,360" ><br>
+Y Values: <input type="text" id = "yvalinput" name="yvalinput" size = "100"/ value = "0.226,0.256,0.320,0.407,0.589,0.879,1.104,1.301,1.480,1.640,1.784,1.897,2.000,2.096,2.192,2.290"><br>
+
+<div id = "curveformula">Random!</div>
+<canvas id="canvas" width="700" height="400"></canvas><br>
+Predictive:<br>
+<canvas id="predictive" width="700" height="400"></canvas>
+
+<div id = "expected"></div>
+
+<script>
+
+/*
+30,60,90,120
+0.329666103,0.446486485,0.486631195,0.492684413
+
+
+*/
+
+var equation;
+var ra1=0, ra2=0, rb1=0;
+
+var roascurve = []; //is refreshed upon GETROAS
+
+var option = "default";
+//alert ($("#xvalinput").val());
+//x = $("#xvalinput").val();
+//x.split(",");
+
+//y = $("#yvalinput").val();
+//y.split(",");
+
+//console.log (x + y);
+
+calROAS(option);
+
+//alert (x);
+
+//alert (x);
+
+
+
+	function plot (){	
+	
+x = $("#xvalinput").val();
+x = x.split(",");
+
+y = $("#yvalinput").val();
+y = y.split(",");
+
+
+
+
+calROAS(option);
+
+console.log ("ra1:" + ra1 + " ra2:" + ra2 + " rb1:" + rb1);
+
+/////////////
+var xpred = [];
+var ypred = [];
+
+
+
+for (i = 0; i<25; i++)
+{
+xpred.push(i*30);
+
+}
+
+console.log ("Predictive Months:" + xpred);
+
+
+for (i = 0; i<xpred.length; i++)
+{
+
+if (option == "pareto")
+	{
+	ypred.push(getPareto(xpred[i],ra1,ra2));
+	}
+else {
+	ypred.push(getROAS(xpred[i],ra1,ra2,rb1));
+
+}
+}
+
+console.log ("Predictive ROAS:" + ypred);
+
+var predhtml = "";
+
+for (i = 0; i<xpred.length; i++)
+{
+	predhtml += xpred[i] + "," + ypred[i] + "<br>";
+
+}
+
+$("#expected").html(predhtml);
+
+//predictive(x,y);
+
+
+		var lineChartData = {
+			labels : x,
+			datasets : [
+				{
+					label: "Actual Data:",
+					fillColor : "rgba(220,220,220,0.2)",
+					strokeColor : "rgba(220,220,220,1)",
+					pointColor : "rgba(220,220,220,1)",
+					pointStrokeColor : "#fff",
+					pointHighlightFill : "#fff",
+					pointHighlightStroke : "rgba(220,220,220,1)",
+					data : y
+				},
+				{
+					label: "equation",
+					fillColor : "rgba(151,187,205,0.2)",
+					strokeColor : "rgba(151,0,0,1)",
+					pointColor : "rgba(151,187,205,1)",
+					pointStrokeColor : "#fff",
+					pointHighlightFill : "#fff",
+					pointHighlightStroke : "rgba(205,0,0,1)",
+					data : roascurve
+				}
+				
+			]
+
+		}
+
+	
+
+
+		var predChartData = {
+			labels : xpred,
+			datasets : [
+				{
+					label: "Actual Data:",
+					fillColor : "rgba(220,220,220,0.2)",
+					strokeColor : "rgba(220,220,220,1)",
+					pointColor : "rgba(220,220,220,1)",
+					pointStrokeColor : "#fff",
+					pointHighlightFill : "#fff",
+					pointHighlightStroke : "rgba(220,220,220,1)",
+					data : ypred
+				}
+			
+				
+			]
+
+		}
+
+
+		var ctx2 = document.getElementById("predictive").getContext("2d");
+		var ctx = document.getElementById("canvas").getContext("2d");
+	
+			window.myLine = new Chart(ctx).Line(lineChartData, {
+			responsive: false
+		});	
+
+			
+
+	window.myLine = new Chart(ctx2).Line(predChartData, {
+			responsive: false
+		});	
+
+
+			console.log ("Equation Updated:" + equation);
+			$("#curveformula").html(equation);
+	
+	}
+
+function getROAS (x, a1, a2, b1) {
+	// y
+	
+	var y = a1 + a2 * Math.pow(x,b1);
+	//console.log ("getROAS: y = " + y);
+	return y;
+
+}
+
+function getPareto (x, a, b) {
+	var y = 1/(Math.pow((b/x),a));
+		return y;
+
+}
+
+
+function calROAS (params) {
+
+
+	if (params=="pareto") {
+		console.log ("Pareto Curve");
+	//gets x values from global
+		decaycurve = function(x,P){
+		//return x.map(function(xi){return (P[0]+1/(1/(P[1]*(xi-P[2]))+1/P[3]))})
+		return x.map(
+			function(xi){
+					return getPareto(xi,P[0],P[1])
+				}
+
+				)
+			};
+
+
+	//Parms=fminsearch(fun,[100,30,10,5000],x,y);
+	Parms=fminsearch(decaycurve,[.1,.1],x,y,{maxIter:10000,display:true})
+	//Math.round(original*100)/100  
+
+	ra1 = Parms[0];
+	ra2 = Parms[1];
+	//rb1 = Parms[2];
+	a1 = Math.round(Parms[0]*1000)/1000;
+	a2 = Math.round(Parms[1]*1000)/1000;
+	//b1 = Math.round(Parms[2]*1000)/1000;
+
+	//equation= "PARETRO y = " + a1 + " + " + a2 + "*" + "x^" + b1;
+
+
+//equation= "PARETRO y = " + a1 + " + " + a2 + "*" + "x^" + b1;
+
+
+
+	for (i = 0; i<x.length; i++)
+	{
+		roascurve.push(getPareto(x[i],Parms[0],Parms[1]));
+
+	}
+
+	return Parms;
+
+
+
+	}
+	else {
+		console.log ("Default Diminishing Returns Curve");
+		//gets x values from global
+		decaycurve = function(x,P){
+		//return x.map(function(xi){return (P[0]+1/(1/(P[1]*(xi-P[2]))+1/P[3]))})
+		return x.map(
+			function(xi){
+					return getROAS(xi,P[0],P[1],P[2])
+				}
+
+				)
+			};
+
+
+	//Parms=fminsearch(fun,[100,30,10,5000],x,y);
+	Parms=fminsearch(decaycurve,[.01,.01,.1],x,y,{maxIter:10000,display:true})
+//Parms=fminsearch(decaycurve,[.01,.01,.1],x,y,{maxIter:10000,display:false}); // PARETO
+	//Math.round(original*100)/100  
+
+	ra1 = Parms[0];
+	ra2 = Parms[1];
+	rb1 = Parms[2];
+	a1 = Math.round(Parms[0]*1000)/1000;
+	a2 = Math.round(Parms[1]*1000)/1000;
+	b1 = Math.round(Parms[2]*1000)/1000;
+
+	equation= "y = " + a1 + " + " + a2 + "*" + "x^" + b1;
+
+
+
+
+
+	for (i = 0; i<x.length; i++)
+	{
+		roascurve.push(getROAS(x[i],Parms[0],Parms[1],Parms[2]));
+
+	}
+
+	return Parms;
+
+
+	console.log(roascurve);	
+	}
+	
+
+}
+
+
+	</script>
+
+</body>
+</html>

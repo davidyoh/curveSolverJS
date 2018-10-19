@@ -1,0 +1,148 @@
+<html>
+<head>
+<script src = "https://code.jquery.com/jquery-2.1.1.min.js"></script>
+<script src="fminsearch.js"></script>
+<script src="Chart.min.js"></script>
+</head>
+<body>
+
+<a id = "refreshplot" onclick = "plot()" href = "#">REFRESH THIS</a><br>
+X Values: <input type="text" id = "xvalinput" name="xvalinput" size = "100"/ value = "1,3,7,14,30,60,90,120,150,180,210,240,270,300,330,360" ><br>
+Y Values: <input type="text" id = "yvalinput" name="yvalinput" size = "100"/ value = "0.226,0.256,0.320,0.407,0.589,0.879,1.104,1.301,1.480,1.640,1.784,1.897,2.000,2.096,2.192,2.290"><br>
+
+
+<canvas id="canvas" width="700" height="300"></canvas>
+
+<script>
+x = [1,3,7,14,30,60,90,120,150,180,210,240,270,300,330,360];
+	y = [0.226,0.256,0.320,0.407,0.589,0.879,1.104,1.301,1.480,1.640,1.784,1.897,2.000,2.096,2.192,2.290];
+
+
+
+
+var roascurve = [];
+
+//alert ($("#xvalinput").val());
+//x = $("#xvalinput").val();
+//x.split(",");
+
+//y = $("#yvalinput").val();
+//y.split(",");
+
+console.log (x + y);
+
+calROAS(x,y);
+
+//alert (x);
+
+//alert (x);
+
+
+
+	function plot (){	
+	
+x = $("#xvalinput").val();
+x = x.split(",");
+
+y = $("#yvalinput").val();
+y = y.split(",");
+
+
+
+		var lineChartData = {
+			labels : x,
+			datasets : [
+				{
+					label: "Actual Data:",
+					fillColor : "rgba(220,220,220,0.2)",
+					strokeColor : "rgba(220,220,220,1)",
+					pointColor : "rgba(220,220,220,1)",
+					pointStrokeColor : "#fff",
+					pointHighlightFill : "#fff",
+					pointHighlightStroke : "rgba(220,220,220,1)",
+					data : y
+				},
+				{
+					label: "equation",
+					fillColor : "rgba(151,187,205,0.2)",
+					strokeColor : "rgba(151,0,0,1)",
+					pointColor : "rgba(151,187,205,1)",
+					pointStrokeColor : "#fff",
+					pointHighlightFill : "#fff",
+					pointHighlightStroke : "rgba(205,0,0,1)",
+					data : roascurve
+				}
+				
+			]
+
+		}
+
+	
+		var ctx = document.getElementById("canvas").getContext("2d");
+		window.myLine = new Chart(ctx).Line(lineChartData, {
+			responsive: true
+		});
+	}
+
+function getROAS (x, a1, a2, b1) {
+	// y
+	var y = a1 + a2 * Math.pow(x,b1);
+	//console.log ("getROAS: y = " + y);
+	return y;
+
+}
+
+
+function calROAS () {
+
+	//x = [32,37,42,47,52,57,62,67,72,77,82,87,92];
+	
+	//x = [30,60,90,120,150,180,210,240,270,300,330,360];
+//	x = [30,60,90,120,150,180,210];
+	//y = [0.329666103,0.446486485,0.486631195,0.492684413]
+
+	//y = [0.589,0.879,1.104,1.301,1.480,1.640,1.784,1.897,2.000,2.096,2.192,2.290];
+	decaycurve = function(x,P){
+		//return x.map(function(xi){return (P[0]+1/(1/(P[1]*(xi-P[2]))+1/P[3]))})
+		return x.map(
+			function(xi){
+					return getROAS(xi,P[0],P[1],P[2])
+				}
+
+				)
+	};
+
+
+	//Parms=fminsearch(fun,[100,30,10,5000],x,y);
+	Parms=fminsearch(decaycurve,[.01,.01,.1],x,y,{maxIter:10000,display:true})
+	//Math.round(original*100)/100  
+
+
+	a1 = Math.round(Parms[0]*1000)/1000;
+	a2 = Math.round(Parms[1]*1000)/1000;
+	b1 = Math.round(Parms[2]*1000)/1000;
+
+	var equation= "y = " + a1 + " + " + a2 + "*" + "x^" + b1;
+
+
+
+
+
+	for (i = 0; i<x.length; i++)
+	{
+		roascurve.push(getROAS(x[i],Parms[0],Parms[1],Parms[2]));
+
+	}
+
+	return Parms;
+
+
+	console.log(roascurve);
+
+}
+
+
+	</script>
+
+</body>
+</html>
